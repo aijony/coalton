@@ -38,6 +38,27 @@
    #:imag-part
    #:conjugate
    #:ii
+   #:Floating
+   #:exp
+   #:log
+   #:sin
+   #:cos
+   #:tan
+   #:asin
+   #:acos
+   #:atan
+   #:sinh
+   #:cosh
+   #:tanh
+   #:asinh
+   #:acosh
+   #:atanh
+   #:pi
+   #:sqrt
+   #:**
+   #:logBase
+   #:log2
+   #:log10
    #:floor
    #:ceiling
    #:round
@@ -648,6 +669,127 @@ The fields are defined as follows:
 
 (%define-standard-complex-instances Fraction)
 
+
+;;;; Floating
+
+(coalton-toplevel
+  (define-class (Exponential :a)
+    "The exponential map and its inverse."
+    (exp (:a -> :a))
+    (log (:a -> :a)))
+
+  (define-class (Trig :a)
+    "Trigonometric functions and their inverses."
+    (sin (:a -> :a))
+    (cos (:a -> :a))
+    (tan (:a -> :a))
+    (asin (:a -> :a))
+    (acos (:a -> :a))
+    (atan (:a -> :a)))
+
+  (define-class ((Exponential :a) => Hyperbolic :a)
+    "Hyperbolic trigonometric functions and their inverses."
+    (sinh (:a -> :a))
+    (cosh (:a -> :a))
+    (tanh (:a -> :a))
+    (asinh (:a -> :a))
+    (acosh (:a -> :a))
+    (atanh (:a -> :a)))
+
+  (define-class ((Dividable :a :a) (Num :a) (Trig :a)  (Hyperbolic :a)
+                 => Floating :a)
+    "Common transcendental functions and constants."
+    (pi :a)
+    (sqrt (:a -> :a))
+    (** (:a -> :a -> :a))
+    (logBase (:a -> :a -> :a)))
+
+  (declare log2 (Floating :a => :a -> :a))
+  (define (log2 x) (logBase 2 x))
+  (declare log10 (Floating :a => :a -> :a))
+  (define (log10 x) (logBase 10 x)))
+
+(cl:defmacro %define-complex-floating-functions (coalton-type cl-type)
+  `(coalton-toplevel
+     (define-instance (Exponential ,coalton-type)
+       (define (exp x) (lisp ,coalton-type (x) (cl:exp x)))
+       ;; Note omision of optional parameter
+       (define (log x) (lisp ,coalton-type (x) (cl:log x))))
+
+     (define-instance (Trig ,coalton-type)
+       (define (sin x) (lisp ,coalton-type (x) (cl:sin x)))
+       (define (cos x) (lisp ,coalton-type (x) (cl:cos x)))
+       (define (tan x) (lisp ,coalton-type (x) (cl:tan x)))
+       (define (asin x) (lisp ,coalton-type (x) (cl:asin x)))
+       (define (acos x) (lisp ,coalton-type (x) (cl:acos x)))
+       (define (atan x) (lisp ,coalton-type (x) (cl:atan x))))
+
+     (define-instance (Hyperbolic ,coalton-type)
+       (define (sinh x) (lisp ,coalton-type (x) (cl:sinh x)))
+       (define (cosh x) (lisp ,coalton-type (x) (cl:cosh x)))
+       (define (tanh x) (lisp ,coalton-type (x) (cl:tanh x)))
+       (define (asinh x) (lisp ,coalton-type (x) (cl:asinh x)))
+       (define (acosh x) (lisp ,coalton-type (x) (cl:acosh x)))
+       (define (atanh x) (lisp ,coalton-type (x) (cl:atanh x))))
+
+     (define-instance (Floating ,coalton-type)
+       (define pi (lisp ,coalton-type () (cl:coerce cl:pi (cl:quote ,cl-type))))
+       (define (sqrt x) (lisp ,coalton-type (x) (cl:sqrt x)))
+       (define (** x y) (lisp ,coalton-type (x y) (cl:expt x y)))
+       ;; Note flipped arguments
+       (define (logBase x y) (lisp ,coalton-type (x y) (cl:log y x))))))
+
+(cl:defun %floating-check (name x)
+  (cl:if (cl:complexp x)
+         (cl:error "Can't compute ~A with real output." name)
+         x))
+
+(cl:defmacro %define-real-floating-functions (coalton-type cl-type)
+  `(coalton-toplevel
+     (define-instance (Exponential ,coalton-type)
+       ;; Note omision of optional parameter
+       (define (log x) (lisp ,coalton-type (x)
+                         (%floating-check 'log (cl:log x))))
+       (define (exp x) (lisp ,coalton-type (x) (cl:exp x))))
+
+     (define-instance (Trig ,coalton-type)
+       (define (sin x) (lisp ,coalton-type (x) (cl:sin x)))
+       (define (cos x) (lisp ,coalton-type (x) (cl:cos x)))
+       (define (tan x) (lisp ,coalton-type (x) (cl:tan x)))
+       (define (asin x) (lisp ,coalton-type (x)
+                          (%floating-check 'asin (cl:asin x))))
+       (define (acos x) (lisp ,coalton-type (x)
+                          (%floating-check 'acos (cl:acos x))))
+       (define (atan x) (lisp ,coalton-type (x)
+                          (%floating-check 'atan (cl:atan x)))))
+
+     (define-instance (Hyperbolic ,coalton-type)
+       (define (sinh x) (lisp ,coalton-type (x) (cl:sinh x)))
+       (define (cosh x) (lisp ,coalton-type (x) (cl:cosh x)))
+       (define (tanh x) (lisp ,coalton-type (x) (cl:tanh x)))
+       (define (asinh x) (lisp ,coalton-type (x)
+                           (%floating-check 'asinh (cl:asinh x))))
+       (define (acosh x) (lisp ,coalton-type (x)
+                           (%floating-check 'acosh (cl:acosh x))))
+       (define (atanh x) (lisp ,coalton-type (x)
+                           (%floating-check 'atanh (cl:atanh x)))))
+
+     (define-instance (Floating ,coalton-type)
+       (define pi (lisp ,coalton-type () (cl:coerce cl:pi (cl:quote ,cl-type))))
+       (define (sqrt x) (lisp ,coalton-type (x)
+                          (%floating-check 'sqrt (cl:sqrt x))))
+       (define (** x y) (lisp ,coalton-type (x y)
+                          (%floating-check '** (cl:expt x y))))
+       ;; Note flipped arguments
+       (define (logBase x y) (lisp ,coalton-type (x y)
+                               (%floating-check 'logBase (cl:log y x)))))))
+
+(%define-real-floating-functions Single-Float cl:single-float)
+(%define-real-floating-functions Double-Float cl:double-float)
+(%define-complex-floating-functions
+ (Complex Single-Float) (cl:complex cl:single-float))
+(%define-complex-floating-functions
+ (Complex Double-Float) (cl:complex cl:double-float))
 
 ;;;; `Bits' instances
 ;;; signed
