@@ -310,6 +310,7 @@
    #:parse-type-definitons              ; FUNCTION
    #:parse-class-signature              ; FUNCTION
    #:parse-class-definitions            ; FUNCTION
+   #:add-instance-definition            ; FUNCTION
    #:parse-instance-definition          ; FUNCTION
    )
   (:export

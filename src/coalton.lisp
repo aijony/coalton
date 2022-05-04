@@ -229,37 +229,34 @@ in FORMS that begin with that operator."
 
             ;; Methods must be typechecker after the types of values
             ;; are determined since instances may reference them.
-            (let* ((instance-definitions
-                     (process-toplevel-instance-definitions
-                      instance-defines
-                      package
-                      env))
+            (multiple-value-bind (env instance-definitions)
+                (process-toplevel-instance-definitions instance-defines package env)
 
-                   (translation-unit
-                     (make-translation-unit
-                      :types defined-types
-                      :definitions toplevel-bindings
-                      :instances instance-definitions
-                      :classes classes
-                      :package package)))
+              (let ((translation-unit
+                      (make-translation-unit
+                       :types defined-types
+                       :definitions toplevel-bindings
+                       :instances instance-definitions
+                       :classes classes
+                       :package package)))
 
-              (multiple-value-bind (program env)
-                  (coalton-impl/codegen:compile-translation-unit
-                   translation-unit
-                   env)
+                (multiple-value-bind (program env)
+                    (coalton-impl/codegen:compile-translation-unit
+                     translation-unit
+                     env)
 
-                (values
-                 (if *coalton-skip-update*
-                     program
-                     `(progn
-                        (eval-when (:load-toplevel)
-                          (unless (eq (coalton-release-p) ,(coalton-release-p))
-                            ,(if (coalton-release-p)
-                                `(error "~A was compiled in release mode but loaded in development." ,(or *compile-file-pathname* *load-truename*))
-                                `(error "~A was compiled in development mode but loaded in release." ,(or *compile-file-pathname* *load-truename*)))))
-                        ,(coalton-impl/typechecker::generate-diff
-                          translation-unit
-                          env
-                          '*global-environment*)
-                        ,program))
-                 env)))))))))
+                  (values
+                   (if *coalton-skip-update*
+                       program
+                       `(progn
+                          (eval-when (:load-toplevel)
+                            (unless (eq (coalton-release-p) ,(coalton-release-p))
+                              ,(if (coalton-release-p)
+                                   `(error "~A was compiled in release mode but loaded in development." ,(or *compile-file-pathname* *load-truename*))
+                                   `(error "~A was compiled in development mode but loaded in release." ,(or *compile-file-pathname* *load-truename*)))))
+                          ,(coalton-impl/typechecker::generate-diff
+                            translation-unit
+                            env
+                            '*global-environment*)
+                          ,program))
+                   env))))))))))
