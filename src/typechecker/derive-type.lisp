@@ -627,19 +627,19 @@ EXPL-DECLARATIONS is a HASH-TABLE from SYMBOL to SCHEME"
                                           :test #'equalp)) ; gs
              )
 
-        ;; NOTE: This is where defauling happens
+        (labels ((restricted (bindings)
+                   (some (lambda (b) (not (coalton-impl/ast::node-abstraction-p (cdr b))))
+                         bindings)))
 
-        (unless allow-deferred-predicates
-          (setf local-subs (compose-substitution-lists (default-subs env nil expr-preds) local-subs))
-          (setf expr-preds (apply-substitution local-subs expr-preds))
-          (setf expr-types (apply-substitution local-subs expr-types)))
+          ;; NOTE: This is where defaulting happens
 
-        (multiple-value-bind (deferred-preds retained-preds)
-            (split-context env env-tvars local-tvars expr-preds local-subs)
+          (unless (or allow-deferred-predicates (not (restricted bindings)))
+            (setf local-subs (compose-substitution-lists (default-subs env nil expr-preds) local-subs))
+            (setf expr-preds (apply-substitution local-subs expr-preds))
+            (setf expr-types (apply-substitution local-subs expr-types)))
 
-          (labels ((restricted (bindings)
-                     (some (lambda (b) (not (coalton-impl/ast::node-abstraction-p (cdr b))))
-                           bindings)))
+          (multiple-value-bind (deferred-preds retained-preds)
+              (split-context env env-tvars local-tvars expr-preds local-subs)
 
             ;; NOTE: This is where the monomorphism restriction happens
 
