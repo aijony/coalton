@@ -187,3 +187,35 @@
      (define (imag-part a)
        (match a
          ((%Complex _ b) b)))))
+
+(cl:defmacro %define-complex-floating-functions (coalton-type cl-type)
+  `(coalton-toplevel
+     (define-instance (Float ,coalton-type)
+       (define pi (lisp ,coalton-type () (cl:coerce cl:pi (cl:quote ,cl-type))))
+       ;; Note omision of optional parameter
+       (define (log x) (lisp ,coalton-type (x) (cl:log x)))
+       (define (exp x) (lisp ,coalton-type (x) (cl:exp x)))
+
+       (define (sin x) (lisp ,coalton-type (x) (cl:sin x)))
+       (define (cos x) (lisp ,coalton-type (x) (cl:cos x)))
+       (define (tan x) (lisp ,coalton-type (x) (cl:tan x)))
+       (define (sinh x) (lisp ,coalton-type (x) (cl:sinh x)))
+       (define (cosh x) (lisp ,coalton-type (x) (cl:cosh x)))
+       (define (tanh x) (lisp ,coalton-type (x) (cl:tanh x)))
+
+       (define (asin x) (lisp ,coalton-type (x) (cl:asin x)))
+       (define (acos x) (lisp ,coalton-type (x) (cl:acos x)))
+       (define (asinh x) (lisp ,coalton-type (x) (cl:asinh x)))
+       (define (atan x) (lisp ,coalton-type (x) (cl:atan x)))
+       (define (acosh x) (lisp ,coalton-type (x) (cl:acosh x)))
+       (define (atanh x) (lisp ,coalton-type (x) (cl:atanh x)))
+
+       (define (sqrt x) (lisp ,coalton-type (x) (cl:sqrt x)))
+       (define (** x y) (lisp ,coalton-type (x y) (cl:expt x y)))
+       ;; Note flipped arguments
+       (define (logBase x y) (lisp ,coalton-type (x y) (cl:log y x))))))
+
+(%define-complex-floating-functions
+ (Complex Single-Float) cl:single-float)
+(%define-complex-floating-functions
+ (Complex Double-Float) cl:double-float)

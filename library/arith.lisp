@@ -3,7 +3,7 @@
 ;;;; Number types and basic arithmetic.
 
 (coalton-library/utils::defstdlib-package #:coalton-library/arith
-  (:use
+    (:use
      #:coalton
      #:coalton-library/builtin
      #:coalton-library/classes)
@@ -19,6 +19,28 @@
    #:integer->double-float
    #:single-float->integer
    #:double-float->integer
+   #:RealFloat
+   #:rationalize
+   #:Float
+   #:exp
+   #:sqrt
+   #:log
+   #:log2
+   #:acos
+   #:cos
+   #:sin
+   #:asin
+   #:tan
+   #:atan
+   #:acosh
+   #:cosh
+   #:sinh
+   #:asinh
+   #:tanh
+   #:atanh
+   #:pi
+   #:**
+   #:logBase
    #:negate
    #:abs
    #:sign
@@ -119,12 +141,12 @@ The fields are defined as follows:
 
 (cl:defmacro %define-overflow-handler (name bits)
   `(cl:defun ,name (value)
-    (cl:typecase value
-      ((cl:signed-byte ,bits) value)
-      (cl:otherwise
-       (cl:cerror "Continue, wrapping around."
-                  ,(cl:format cl:nil "Signed value overflowed ~D bits." bits))
-       (%unsigned->signed ,bits (cl:mod value ,(cl:expt 2 bits)))))))
+     (cl:typecase value
+       ((cl:signed-byte ,bits) value)
+       (cl:otherwise
+        (cl:cerror "Continue, wrapping around."
+                   ,(cl:format cl:nil "Signed value overflowed ~D bits." bits))
+        (%unsigned->signed ,bits (cl:mod value ,(cl:expt 2 bits)))))))
 
 (cl:eval-when (:compile-toplevel :load-toplevel)
   (cl:defparameter +fixnum-bits+
@@ -500,7 +522,7 @@ The fields are defined as follows:
 (cl:defmacro define-signed-bit-instance (type handle-overflow)
   (cl:flet ((lisp-binop (op)
               `(lisp ,type (left right)
-                     (,op left right))))
+                 (,op left right))))
     `(coalton-toplevel
        (define-instance (bits:Bits ,type)
          (define (bits:and left right)
@@ -542,19 +564,19 @@ The fields are defined as follows:
 (cl:defmacro define-unsigned-bit-instance (type width)
   (cl:flet ((define-binop (coalton-name lisp-name)
               `(define (,coalton-name left right)
-                   (lisp ,type (left right)
-                         (,lisp-name left right)))))
+                 (lisp ,type (left right)
+                   (,lisp-name left right)))))
     `(coalton-toplevel
-      (define-instance (bits:Bits ,type)
-        ,(define-binop 'bits:and 'cl:logand)
-        ,(define-binop 'bits:or 'cl:logior)
-        ,(define-binop 'bits:xor 'cl:logxor)
-        (define (bits:not bits)
-            (lisp ,type (bits) (unsigned-lognot bits ,width)))
-        (define (bits:shift amount bits)
-            (lisp ,type (amount bits)
-                  (cl:logand (cl:ash bits amount)
-                             (cl:1- (cl:ash 1 ,width)))))))))
+       (define-instance (bits:Bits ,type)
+         ,(define-binop 'bits:and 'cl:logand)
+         ,(define-binop 'bits:or 'cl:logior)
+         ,(define-binop 'bits:xor 'cl:logxor)
+         (define (bits:not bits)
+           (lisp ,type (bits) (unsigned-lognot bits ,width)))
+         (define (bits:shift amount bits)
+           (lisp ,type (amount bits)
+             (cl:logand (cl:ash bits amount)
+                        (cl:1- (cl:ash 1 ,width)))))))))
 
 (define-unsigned-bit-instance U8 8)
 (define-unsigned-bit-instance U16 16)
@@ -573,6 +595,7 @@ The fields are defined as follows:
 (define-sxhash-hasher U32)
 (define-sxhash-hasher U64)
 (define-sxhash-hasher Integer)
+(define-sxhash-hasher Fraction)
 (define-sxhash-hasher IFix)
 (define-sxhash-hasher UFix)
 (define-sxhash-hasher Single-Float)
@@ -692,7 +715,92 @@ Note: This does *not* divide double-float arguments."
   (define (1- num)
     (- num (fromInt 1))))
 
+(coalton-toplevel
+
+  (define-class ((Ord :a) (Num :a) => (RealFloat :a))
+    (rationalize (:a -> Fraction)))
+
+  (define-class ((Dividable :a :a) (Num :a) => Float :a)
+    "Common floating point operations."
+    (pi :a)
+    (sqrt (:a -> :a))
+    ;; a ** x = exp(x log(a))
+    (** (:a -> :a -> :a))
+    ;; logBase a x = log x / log a
+    (logBase (:a -> :a -> :a))
+    (exp (:a -> :a))
+    (log (:a -> :a))
+    (sin (:a -> :a))
+    (cos (:a -> :a))
+    (tan (:a -> :a))
+    (sinh (:a -> :a))
+    (cosh (:a -> :a))
+    (tanh (:a -> :a))
+    (asin (:a -> :a))
+    (acos (:a -> :a))
+    (atan (:a -> :a))
+    (asinh (:a -> :a))
+    (acosh (:a -> :a))
+    (atanh (:a -> :a)))
+
+  (declare log2 (Float :a => :a -> :a))
+  (define (log2 x) (logBase 2 x))
+  (declare log10 (Float :a => :a -> :a))
+  (define (log10 x) (logBase 10 x)))
+
+(cl:defun %floating-check (name x)
+  (cl:if (cl:complexp x)
+         (cl:error "Can't compute ~A with real output." name)
+         x))
+
+(cl:defmacro %define-real-floating-functions (coalton-type cl-type)
+  `(coalton-toplevel
+     (define-instance (Float ,coalton-type)
+       (define pi (lisp ,coalton-type () (cl:coerce cl:pi (cl:quote ,cl-type))))
+       ;; Note omision of optional parameter
+       (define (log x) (lisp ,coalton-type (x)
+                         (%floating-check 'log (cl:log x))))
+       (define (exp x) (lisp ,coalton-type (x) (cl:exp x)))
+
+       (define (sin x) (lisp ,coalton-type (x) (cl:sin x)))
+       (define (cos x) (lisp ,coalton-type (x) (cl:cos x)))
+       (define (tan x) (lisp ,coalton-type (x) (cl:tan x)))
+       (define (sinh x) (lisp ,coalton-type (x) (cl:sinh x)))
+       (define (cosh x) (lisp ,coalton-type (x) (cl:cosh x)))
+       (define (tanh x) (lisp ,coalton-type (x) (cl:tanh x)))
+
+       (define (asin x) (lisp ,coalton-type (x)
+                          (%floating-check 'asin (cl:asin x))))
+       (define (acos x) (lisp ,coalton-type (x)
+                          (%floating-check 'acos (cl:acos x))))
+       (define (asinh x) (lisp ,coalton-type (x)
+                           (%floating-check 'asinh (cl:asinh x))))
+       (define (atan x) (lisp ,coalton-type (x)
+                          (%floating-check 'atan (cl:atan x))))
+       (define (acosh x) (lisp ,coalton-type (x)
+                           (%floating-check 'acosh (cl:acosh x))))
+       (define (atanh x) (lisp ,coalton-type (x)
+                           (%floating-check 'atanh (cl:atanh x))))
+
+       (define (sqrt x) (lisp ,coalton-type (x)
+                          (%floating-check 'sqrt (cl:sqrt x))))
+       (define (** x y) (lisp ,coalton-type (x y)
+                          (%floating-check '** (cl:expt x y))))
+       ;; Note flipped arguments
+       (define (logBase x y) (lisp ,coalton-type (x y)
+                               (%floating-check 'logBase (cl:log y x)))))))
+
+(%define-real-floating-functions Single-Float cl:single-float)
+(%define-real-floating-functions Double-Float cl:double-float)
+(cl:defmacro %define-real-instance (coalton-type)
+  `(coalton-toplevel
+     (define-instance (RealFloat ,coalton-type)
+       (define (rationalize x)
+         (lisp (Fraction) (x)
+           (cl:rationalize x))))))
+
+(%define-real-instance Single-Float)
+(%define-real-instance Double-Float)
+
 #+sb-package-locks
 (sb-ext:lock-package "COALTON-LIBRARY/ARITH")
-
-

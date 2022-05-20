@@ -257,8 +257,8 @@
   (define (append xs ys)
     "Appends two lists together and returns a new list."
     (match xs
-      ((Nil) ys)
-      ((Cons x xs) (Cons x (append xs ys)))))
+      ((Cons x xs) (Cons x (append xs ys)))
+      ((Nil) ys)))
 
   (declare concat (List (List :a) -> List :a))
   (define (concat xs)
