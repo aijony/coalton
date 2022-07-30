@@ -108,6 +108,9 @@
 (defun make-kvariable ()
   (%make-kvar (next-kyvar)))
 
+(defun kvar-id (kind)
+  (kyvar-id (kvar-kyvar kind)))
+
 (defstruct (ksubstitution (:constructor %make-ksubstitution (from to)))
   (from (required 'from) :type kyvar :read-only t)
   (to   (required 'to)   :type kind  :read-only t))
@@ -148,7 +151,9 @@
     (let ((elem (find (kpoly-kyvar kind) subs :key #'ksubstitution-from :test #'equalp)))
       (if elem
           (ksubstitution-to elem)
-          kind)))
+          (if (kpoly-p kind)
+              kind
+              (kpoly)))))
 
   (:method (subs (kind kfun))
     (declare (type ksubstitution-list subs)
@@ -211,6 +216,10 @@
      (%make-ksubstitution
       (kvar-kyvar kind2)
       kind1)))
+
+  (:method ((kind1 kpoly) (kind2 kpoly))
+    (declare (values ksubstitution-list &optional))
+    nil)
 
   (:method ((kind1 kpoly) (kind2 kind))
     (declare (values ksubstitution-list &optional))
@@ -381,7 +390,7 @@
            (write-char #\) stream))))
       (kvar
        (write-string "#K" stream)
-       (write (kyvar-id (kvar-kyvar kind)) :stream stream))
+       (write (kvar-id kind) :stream stream))
       (kind
        (write-string "KIND" stream)))
     kind))

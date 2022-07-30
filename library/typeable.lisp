@@ -40,7 +40,7 @@ It allows for introspection of the current type within a polymorphic function."
     "Returns the TypeRep representing the type of A."
     (typeRep (toProxy a)))
 
-  (define-instance ((Typeable :z) (Typeable :e) => Typeable (:z :e))
+  (define-instance ((Typeable :a) (Typeable :b) => Typeable (:a :b))
     (define (typeRep x)
       (let a = (typeRep ((the (Proxy (:a :b) -> (Proxy :a)) (fn (_) Proxy)) x)))
       (let b = (typeRep ((the (Proxy (:a :b) -> (Proxy :b)) (fn (_) Proxy)) x)))

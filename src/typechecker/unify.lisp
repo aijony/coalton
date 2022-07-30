@@ -26,8 +26,7 @@
   (:method ((type1 ty) (type2 tvar))
     (bind-variable (tvar-tyvar type2) type1))
   (:method ((type1 tcon) (type2 tcon))
-    (if (equalp (tcon-tycon type1)
-                (tcon-tycon type2))
+    (if (tcon= type1 type2)
         nil
         (error 'unification-error :type1 type1 :type2 type2)))
   (:method ((type1 ty) (type2 ty))
@@ -59,7 +58,7 @@ apply s type1 == type2")
         (list (%make-substitution (tvar-tyvar type1) type2))
         (error 'type-kind-mismatch-error :type1 type1 :type2 type2)))
   (:method ((type1 tcon) (type2 tcon))
-    (if (equalp type1 type2)
+    (if (tcon= type1 type2)
         nil
         (error 'unification-error :type1 type1 :type2 type2)))
   (:method ((type1 ty) (type2 ty))

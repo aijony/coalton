@@ -4,6 +4,11 @@
 ;;; Type equality
 ;;;
 
+(defun tcon= (type1 type2)
+  (and (eql (tycon-name (tcon-tycon type1))
+               (tycon-name (tcon-tycon type2)))
+       (kind= (kind-of type1) (kind-of type2))))
+
 (defun type= (type1 type2)
   (declare (type ty type1 type2)
            (values boolean list))
@@ -25,9 +30,8 @@
               (and (eql (car pair1) (cdr pair2))
                    (eql (cdr pair1) (car pair2)))))))
 
-
         ;; Type constants
-        ((and (tcon-p type1) (tcon-p type2)) (equalp type1 type2))
+        ((and (tcon-p type1) (tcon-p type2)) (tcon= type1 type2))
 
         ;; Type application
         ((and (tapp-p type1) (tapp-p type2))
@@ -95,9 +99,14 @@ where they occur within the kind signature."
          (values (kfun k1 k2) j l2))))
     (kpoly
      (let ((next-id
-             (or (cdr (assoc (kpoly-name kind) kpoly-subs)) (incf n))))
+             (or (cdr (assoc (kpoly-id kind) kpoly-subs)) (incf n))))
        (values (kpoly nil next-id) n
-               (cons (cons (kpoly-name kind) next-id) kpoly-subs))))
+               (cons (cons (kpoly-id kind) next-id) kpoly-subs))))
+    (kvar
+     (let ((next-id
+             (or (cdr (assoc (kvar-id kind) kpoly-subs)) (incf n))))
+       (values (kpoly nil next-id) n
+               (cons (cons (kvar-id kind) next-id) kpoly-subs))))
     (t (values kind n kpoly-subs))))
 
 (defun kind= (k1 k2)
